@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phishing URL Detector — ML + Java</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;500;800&family=JetBrains+Mono:wght@400;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#0b0c15 0%,#111122 50%,#0d1218 100%);color:#e8ecf1;min-height:100vh;overflow-x:hidden}
+.glow-orb{position:fixed;width:500px;height:500px;border-radius:50%;filter:blur(160px);opacity:.25;pointer-events:none;z-index:0;animation:floatOrb 12s ease-in-out infinite alternate}
+.glow-orb.cyan{background:#00f0ff;top:-120px;left:-60px;animation-delay:0s}
+.glow-orb.pink{background:#ff2d75;bottom:-140px;right:-80px;animation-delay:-6s}
+@keyframes floatOrb{0%{transform:translate(0,0)scale(1)}100%{transform:translate(60px,-40px)scale(1.15)}}
+.wrapper{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:48px 24px 80px}
+header{text-align:center;margin-bottom:56px}
+header h1{font-weight:800;font-size:clamp(2.2rem,5.5vw,3.6rem);letter-spacing:-2.5px;line-height:1.05}
+header h1 .highlight{background:linear-gradient(90deg,#38bdf8,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+header p{margin-top:14px;color:#8b95a5;font-size:1.05rem;font-weight:300;letter-spacing:.2px}
+.card-grid{display:grid;grid-template-columns:1fr;gap:28px}
+@media(min-width:860px){.card-grid{grid-template-columns:1fr 1fr}}
+.card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:24px;padding:36px 32px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 24px 60px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.05);transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease;animation:fadeUp .7s ease-out both}
+.card:hover{transform:translateY(-4px);box-shadow:0 32px 80px rgba(0,0,0,.45);border-color:rgba(255,255,255,.1)}
+.card:nth-child(1){animation-delay:.05s}.card:nth-child(2){animation-delay:.15s}.card:nth-child(3){animation-delay:.25s}
+@keyframes fadeUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+.card-header{display:flex;align-items:center;gap:14px;margin-bottom:24px}
+.card-header .dot{width:10px;height:10px;border-radius:50%;box-shadow:0 0 0 4px rgba(255,255,255,.06)}
+.card-header h2{font-size:1.05rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#94a3b8}
+.card-header h2 .badge{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:20px;font-size:.68rem;font-weight:700;letter-spacing:.4px;color:#0b0c15}
+.result-box{border-radius:16px;padding:26px 28px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);position:relative;overflow:hidden}
+.result-box::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;border-radius:4px 4px 0 0}
+.result-box.safe::before{background:#22c55e}.result-box.phish::before{background:#ef4444}.result-box.medium::before{background:#f59e0b}.result-box.high::before{background:#ef4444}.result-box.low::before{background:#22c55e}
+.result-label{font-size:1.35rem;font-weight:800;letter-spacing:-.5px}
+.result-label.safe-color{color:#22c55e}.result-label.phish-color{color:#ef4444}.result-label.medium-color{color:#f59e0b}.result-label.high-color{color:#ef4444}.result-label.low-color{color:#22c55e}
+.score-row{display:flex;align-items:center;gap:14px;margin-top:10px;color:#8b95a5;font-family:'JetBrains Mono',monospace;font-size:.88rem}
+.score-row span{color:#e8ecf1;font-weight:700}
+.progress-track{height:10px;background:rgba(255,255,255,.04);border-radius:10px;overflow:hidden;margin-top:14px;border:1px solid rgba(255,255,255,.05)}
+.progress-fill{height:100%;border-radius:10px;transition:width 1.2s cubic-bezier(.22,1,.36,1)}
+.reasons{margin-top:18px;list-style:none}
+.reasons li{display:flex;align-items:flex-start;gap:10px;padding:6px 0;font-size:.92rem;color:#c4ccd8;line-height:1.45}
+.reasons li::before{content:'•';color:#64748b;font-weight:700;flex-shrink:0}
+.form-wrap{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:40px;margin-bottom:36px;box-shadow:0 24px 60px rgba(0,0,0,.35)}
+.form-wrap h2{font-size:1.6rem;font-weight:800;letter-spacing:-1.5px;margin-bottom:6px}
+.form-wrap .sub{color:#8b95a5;font-size:.95rem;margin-bottom:22px}
+.input-row{display:flex;gap:12px;flex-wrap:wrap;align-items:stretch}
+input[type="text"]{flex:1 1 320px;min-width:240px;padding:16px 20px;font-size:1rem;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:#f8fafc;outline:none;transition:border-color .2s,box-shadow .2s;font-family:'JetBrains Mono',monospace}
+input[type="text"]:focus{border-color:#38bdf8;box-shadow:0 0 0 3px rgba(56,189,248,.15)}
+button{padding:16px 28px;border-radius:14px;border:none;background:linear-gradient(135deg,#38bdf8 0%,#818cf8 100%);color:#0b0c15;font-weight:800;font-size:1rem;cursor:pointer;letter-spacing:.3px;box-shadow:0 10px 30px rgba(56,189,248,.25);transition:transform .15s ease,box-shadow .2s ease}
+button:hover{transform:translateY(-2px);box-shadow:0 14px 36px rgba(56,189,248,.35)}
+button:active{transform:translateY(0)}
+.split-divider{display:flex;align-items:center;gap:14px;color:#4b5563;font-size:.75rem;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin:28px 0}
+.split-divider::before,.split-divider::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.08)}
+.note{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:18px 22px;font-size:.85rem;color:#8b95a5;line-height:1.55}
+.note strong{color:#e8ecf1}
+</style>
+</head>
+<body>
+<div class="glow-orb cyan"></div><div class="glow-orb pink"></div>
+<div class="wrapper">
+<header><h1><span class="highlight">Phishing URL Detector</span></h1><p>ML Model (scikit-learn) + Java Heuristic — live interactive comparison</p></header>
+<div class="form-wrap"><h2>Check any URL</h2><p class="sub">Type a link below — results appear instantly from both detectors.</p>
+<form method="POST" action="/"><div class="input-row"><input type="text" name="url" placeholder="https://example.com" value="{{ url or '' }}" required autocomplete="off" autofocus><button type="submit">Analyze</button></div></form></div>
+{% if result %}<div class="card-grid">
+<div class="card"><div class="card-header"><div class="dot" style="background:#38bdf8;box-shadow:0 0 0 4px rgba(56,189,248,.15)"></div><h2>Machine Learning <span class="badge" style="background:#38bdf8">scikit-learn</span></h2></div><div class="result-box {{ 'safe' if result.ml.pred==0 else 'phish' }}"><div class="result-label {{ 'safe-color' if result.ml.pred==0 else 'phish-color' }}">{{ result.ml.verdict }}</div><div class="score-row">Probability of phishing <span>{{ result.ml.prob }}</span></div><div class="progress-track"><div class="progress-fill" style="width:{{ result.ml.prob_num }}%;background:{{ '#ef4444' if result.ml.pred==1 else '#22c55e' }};"></div></div><ul class="reasons">{% for k,v in result.ml.features.items() %}<li><strong>{{ k }}:</strong> {{ v }}</li>{% endfor %}<li>{{ '🚨 Model predicts phishing' if result.ml.pred==1 else '✅ Model predicts safe' }}</li></ul></div></div>
+<div class="card"><div class="card-header"><div class="dot" style="background:#f59e0b;box-shadow:0 0 0 4px rgba(245,158,11,.15)"></div><h2>Java Heuristic <span class="badge" style="background:#f59e0b">Rule-based</span></h2></div><div class="result-box {{ 'high' if result.java.risk=='HIGH' else ('medium' if result.java.risk=='MEDIUM' else 'low') }}"><div class="result-label {{ 'high-color' if result.java.risk=='HIGH' else ('medium-color' if result.java.risk=='MEDIUM' else 'low-color') }}">{{ result.java.label }}</div><div class="score-row">Risk score <span>{{ result.java.score }}</span> / 10</div><div class="progress-track"><div class="progress-fill" style="width:{{ (result.java.score / 10)*100 }}%;background:{{ result.java.color }};"></div></div><ul class="reasons">{% for r in result.java.reasons %}<li>{{ r }}</li>{% endfor %}<li><strong>Risk level:</strong> {{ result.java.risk }}</li></ul></div></div>
+<div class="card" style="grid-column:1 / -1;"><div class="card-header"><div class="dot" style="background:linear-gradient(135deg,#38bdf8,#a78bfa);box-shadow:0 0 0 4px rgba(168,139,250,.15)"></div><h2>Combined Verdict <span class="badge" style="background:linear-gradient(135deg,#38bdf8,#a78bfa)">Both detectors</span></h2></div><div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center;padding:24px 20px;background:rgba(255,255,255,.02);border-radius:16px;border:1px solid rgba(255,255,255,.06);"><div style="flex:1 1 200px;"><p style="font-size:.8rem;color:#8b95a5;text-transform:uppercase;letter-spacing:.8px;font-weight:700">Machine Learning</p><p style="font-size:1.2rem;font-weight:800;color:{{ '#ef4444' if result.ml.pred==1 else '#22c55e' }};margin-top:4px">{{ result.ml.verdict }} ({{ result.ml.prob }})</p></div><div style="width:1px;height:50px;background:rgba(255,255,255,.08);flex-shrink:0"></div><div style="flex:1 1 200px;"><p style="font-size:.8rem;color:#8b95a5;text-transform:uppercase;letter-spacing:.8px;font-weight:700">Java Heuristic</p><p style="font-size:1.2rem;font-weight:800;color:{{ result.java.color }};margin-top:4px">{{ result.java.label }} ({{ result.java.score }})</p></div><div style="flex:1 1 260px;padding-top:6px;"><p style="font-size:.92rem;color:#c4ccd8;line-height:1.45"><strong style="color:#e8ecf1">Recommendation:</strong> {% if result.ml.pred==1 or result.java.risk=='HIGH' %}<span style="color:#ef4444;font-weight:700">Treat as PHISHING — do not enter credentials.</span>{% elif result.ml.pred==0 and result.java.risk=='LOW' %}<span style="color:#22c55e;font-weight:700">Likely SAFE — still verify before sensitive actions.</span>{% else %}<span style="color:#f59e0b;font-weight:700">Caution advised — verify URL/domain before proceeding.</span>{% endif %}</p></div></div></div></div>
+<div class="note"><strong>How this works:</strong> The ML detector uses a Random Forest trained on 2000 URLs (accuracy 1.00). The Java detector applies heuristic rules (length, @, HTTPS, keywords, subdomains, IP) derived from the original <code>SimplePhishingCheck.java</code> source. Both results are shown side-by-side for comparison.</div>
+{% endif %}<div class="split-divider">Powered by Python + scikit-learn + Java rules</div><div style="text-align:center;color:#475569;font-size:.78rem">Live tunnel URL — shareable with anyone</div>
+</div></body></html>
